@@ -12,10 +12,14 @@ SYSTEM = (
 BASE_7B = "Qwen/Qwen2.5-Coder-7B-Instruct"
 BASE_15B = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 
+_avail = torch.cuda.is_available
+torch.cuda.is_available = lambda: False
 tok7 = AutoTokenizer.from_pretrained(BASE_7B)
-m7 = AutoModelForCausalLM.from_pretrained(BASE_7B, torch_dtype=torch.bfloat16).to("cuda")
+m7 = AutoModelForCausalLM.from_pretrained(BASE_7B, dtype=torch.bfloat16)
 m7 = PeftModel.from_pretrained(m7, "decoded-cipher/nodrix-coder-7b-lora-v2", adapter_name="v2")
 m7.load_adapter("decoded-cipher/nodrix-coder-7b-lora-v3", adapter_name="v3")
+torch.cuda.is_available = _avail
+m7 = m7.to("cuda")
 
 _m15 = None
 
@@ -24,7 +28,7 @@ def base15():
     global _m15
     if _m15 is None:
         tok = AutoTokenizer.from_pretrained(BASE_15B)
-        model = AutoModelForCausalLM.from_pretrained(BASE_15B, torch_dtype=torch.bfloat16).to("cuda")
+        model = AutoModelForCausalLM.from_pretrained(BASE_15B, dtype=torch.bfloat16).to("cuda")
         model = PeftModel.from_pretrained(model, "decoded-cipher/nodrix-coder-1.5b-lora-v1", adapter_name="v1")
         _m15 = (model, tok)
     return _m15
@@ -45,15 +49,16 @@ def run(choice, question):
     which, adapter = MODELS[choice]
     model, tok = (m7, tok7) if which == "7b" else base15()
 
-    ids = tok.apply_chat_template(
+    inputs = tok.apply_chat_template(
         [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}],
-        add_generation_prompt=True, return_tensors="pt",
+        add_generation_prompt=True, return_tensors="pt", return_dict=True,
     ).to("cuda")
+    n = inputs["input_ids"].shape[1]
 
     def gen():
-        out = model.generate(ids, max_new_tokens=400, do_sample=True,
+        out = model.generate(**inputs, max_new_tokens=400, do_sample=True,
                              temperature=0.7, top_p=0.9, pad_token_id=tok.eos_token_id)
-        return tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True)
+        return tok.decode(out[0][n:], skip_special_tokens=True)
 
     if adapter is None:
         with model.disable_adapter():
