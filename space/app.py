@@ -44,7 +44,7 @@ MODELS = {
 CHOICES = list(MODELS)
 
 
-@spaces.GPU(duration=120)
+@spaces.GPU(duration=45)
 def run(choice, question):
     which, adapter = MODELS[choice]
     model, tok = (m7, tok7) if which == "7b" else base15()
@@ -56,7 +56,7 @@ def run(choice, question):
     n = inputs["input_ids"].shape[1]
 
     def gen():
-        out = model.generate(**inputs, max_new_tokens=400, do_sample=True,
+        out = model.generate(**inputs, max_new_tokens=300, do_sample=True,
                              temperature=0.7, top_p=0.9, pad_token_id=tok.eos_token_id)
         return tok.decode(out[0][n:], skip_special_tokens=True)
 
