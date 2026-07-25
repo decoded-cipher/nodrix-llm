@@ -96,4 +96,4 @@ with gr.Blocks(title="Nodrix build assistant — base vs fine-tuned") as demo:
     gr.Examples(EXAMPLES, inputs=question)
     go.click(compare, [question, left, right], [out_l, out_r])
 
-demo.queue().launch()
+demo.queue().launch(ssr_mode=False)
