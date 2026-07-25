@@ -56,6 +56,7 @@ def main():
         *from_seed("seed_guide_code.jsonl", "guide_code"),
         *from_seed("seed_api.jsonl", "api"),
         *from_seed("seed_downlink.jsonl", "downlink"),
+        *from_seed("seed_targeted.jsonl", "targeted"),
     ]
     by_kind = {}
     for kind, m in rows:
